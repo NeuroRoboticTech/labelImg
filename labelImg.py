@@ -702,6 +702,9 @@ class MainWindow(QMainWindow, WindowMixin):
             self.paintCanvas()
             self.addRecentFile(self.filename)
             self.toggleActions(True)
+            title_name = __appname__ + " " + filename
+            print title_name
+            self.setWindowTitle(title_name)
 
             ## Label xml file and show bound box according to its filename
             if self.usingPascalVocFormat is True and \
@@ -843,6 +846,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.lastOpenDir = dirpath
 
         self.dirname = dirpath
+        self.defaultSaveDir = unicode(self.dirname)
         self.mImgList = self.scanAllImages(dirpath)
         self.openNextImg()
 
@@ -864,6 +868,10 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def openNextImg(self, _value=False):
         # Proceding next image without dialog if having any label
+        #print "autoSaving: "
+        #print self.autoSaving
+        #print "defaultSaveDir: "
+        #print self.defaultSaveDir
         if self.autoSaving is True and self.defaultSaveDir is not None:
             if self.dirty is True and self.hasLabels():
                 self.saveFile()
