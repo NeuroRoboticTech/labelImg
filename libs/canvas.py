@@ -307,16 +307,16 @@ class Canvas(QWidget):
         point = shape[index]
 
         if self.drawSquare == True:
-          print "************ index: ", index
-          print "point: ", point
-          print "draw point: ", drawPoint
-          print "pos: ", pos
+          #print "************ index: ", index
+          #print "point: ", point
+          #print "draw point: ", drawPoint
+          #print "pos: ", pos
 
           y_diff = pos.y() - drawPoint.y()
-          print "y_diff: ", y_diff
+          #print "y_diff: ", y_diff
           new_pos = pos
           new_pos = drawPoint + QPointF(y_diff, y_diff)
-          print "new_pos: ", new_pos
+          #print "new_pos: ", new_pos
         else:
           new_pos = pos
 
@@ -344,7 +344,7 @@ class Canvas(QWidget):
         #print "rshift: ", rshift
         #print "lindex: ", lindex
         #print "lshift: ", lshift
-        print ""
+        #print ""
 
         shape.moveVertexBy(rindex, rshift)
         shape.moveVertexBy(lindex, lshift)
