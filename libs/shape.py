@@ -52,7 +52,18 @@ class Shape(object):
             self.line_color = line_color
 
     def close(self):
-        assert len(self.points) > 2
+        assert len(self.points) > 3
+        
+        #Check if points are in counter clockwise order
+        #If they are then swap them.
+        if self.points[0].x() == self.points[1].x():
+          #print "point is CCW. Swapping points."
+          a = self.points[1]
+          b = self.points[3]
+
+          self.points[1] = b
+          self.points[3] = a
+
         self._closed = True
 
     def reachMaxPoints(self):
@@ -148,6 +159,11 @@ class Shape(object):
 
     def moveVertexBy(self, i, offset):
         self.points[i] = self.points[i] + offset
+
+        #print "moveVertexBy"
+        #print "index: ", i
+        #print "points[i]: ", self.points[i]
+        #print "offset: ", offset
 
     def highlightVertex(self, i, action):
         self._highlightIndex = i

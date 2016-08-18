@@ -5,6 +5,8 @@ from PyQt4.QtCore import *
 from shape import Shape
 from lib import distance
 
+import math
+
 CURSOR_DEFAULT = Qt.ArrowCursor
 CURSOR_POINT   = Qt.PointingHandCursor
 CURSOR_DRAW    = Qt.CrossCursor
@@ -43,6 +45,7 @@ class Canvas(QWidget):
         self.hideBackround = False
         self.hShape = None
         self.hVertex = None
+        self.drawPoint = None
         self._painter = QPainter()
         self._cursor = CURSOR_DEFAULT
         # Menus:
@@ -78,7 +81,7 @@ class Canvas(QWidget):
     def unHighlight(self):
         if self.hShape:
             self.hShape.highlightClear()
-        self.hVertex = self.hShape = None
+        self.hVertex = self.hShape = self.drawPoint = None
 
     def selectedVertex(self):
         return self.hVertex is not None
@@ -93,6 +96,11 @@ class Canvas(QWidget):
         if self.drawing():
             self.overrideCursor(CURSOR_DRAW)
             if self.current:
+                #remap the rectangle as a square.
+                sqr_len = math.sqrt(pos.x()*pos.x() + pos.y()+pos.y())
+                pos = QPointF(self.current[0].x() + sqr_len, self.current[0].y() + sqr_len)
+                #print "pos: ", pos
+
                 color = self.lineColor
                 if self.outOfPixmap(pos):
                     # Don't allow the user to draw outside the pixmap.
@@ -113,10 +121,12 @@ class Canvas(QWidget):
         # Polygon copy moving.
         if Qt.RightButton & ev.buttons():
             if self.selectedShapeCopy and self.prevPoint:
+                print "Poly move A"
                 self.overrideCursor(CURSOR_MOVE)
                 self.boundedMoveShape(self.selectedShapeCopy, pos)
                 self.repaint()
             elif self.selectedShape:
+                print "Poly move B"
                 self.selectedShapeCopy = self.selectedShape.copy()
                 self.repaint()
             return
@@ -124,10 +134,12 @@ class Canvas(QWidget):
         # Polygon/Vertex moving.
         if Qt.LeftButton & ev.buttons():
             if self.selectedVertex():
+                #print "Vertex move A"
                 self.boundedMoveVertex(pos)
                 self.shapeMoved.emit()
                 self.repaint()
             elif self.selectedShape and self.prevPoint:
+                print "Vertex move B"
                 self.overrideCursor(CURSOR_MOVE)
                 self.boundedMoveShape(self.selectedShape, pos)
                 self.shapeMoved.emit()
@@ -146,7 +158,7 @@ class Canvas(QWidget):
             if index is not None:
                 if self.selectedVertex():
                     self.hShape.highlightClear()
-                self.hVertex, self.hShape = index, shape
+                self.hVertex, self.hShape, self.drawPoint = index, shape, shape[index]
                 shape.highlightVertex(index, shape.MOVE_VERTEX)
                 self.overrideCursor(CURSOR_POINT)
                 self.setToolTip("Click & drag to move point")
@@ -156,7 +168,7 @@ class Canvas(QWidget):
             elif shape.containsPoint(pos):
                 if self.selectedVertex():
                     self.hShape.highlightClear()
-                self.hVertex, self.hShape = None, shape
+                self.hVertex, self.hShape, self.drawPoint = None, shape, None
                 self.setToolTip("Click & drag to move shape '%s'" % shape.label)
                 self.setStatusTip(self.toolTip())
                 self.overrideCursor(CURSOR_GRAB)
@@ -166,7 +178,7 @@ class Canvas(QWidget):
             if self.hShape:
                 self.hShape.highlightClear()
                 self.update()
-            self.hVertex, self.hShape = None, None
+            self.hVertex, self.hShape, self.drawPoint = None, None, None
 
     def mousePressEvent(self, ev):
         pos = self.transformPos(ev.posF())
@@ -284,12 +296,34 @@ class Canvas(QWidget):
         self.offsets = QPointF(x1, y1), QPointF(x2, y2)
 
     def boundedMoveVertex(self, pos):
-        index, shape = self.hVertex, self.hShape
+        index, shape, drawPoint = self.hVertex, self.hShape, self.drawPoint
+        
         point = shape[index]
-        if self.outOfPixmap(pos):
-            pos = self.intersectionPoint(point, pos)
 
-        shiftPos = pos - point
+        print "************ index: ", index
+        print "point: ", point
+        print "draw point: ", drawPoint
+        print "pos: ", pos
+
+        x_diff = pos.x() - drawPoint.x()
+        y_diff = pos.y() - drawPoint.y()
+        sqr_len = math.sqrt(x_diff*x_diff + y_diff*y_diff)
+        print "x_diff: ", x_diff
+        print "y_diff: ", y_diff
+        print "sqr_len: ", sqr_len
+        #new_pos = pos
+        if x_diff < 0 or y_diff < 0:
+          new_pos = drawPoint - QPointF(sqr_len, sqr_len)
+        else:
+          new_pos = drawPoint + QPointF(sqr_len, sqr_len)
+        print "new_pos: ", new_pos
+
+        if self.outOfPixmap(new_pos):
+            print "out of pixmap"
+            return
+            #new_pos = self.intersectionPoint(point, new_pos)
+
+        shiftPos = new_pos - point
         shape.moveVertexBy(index, shiftPos)
 
         lindex = (index + 1) % 4
@@ -302,8 +336,18 @@ class Canvas(QWidget):
         else:
             lshift = QPointF(shiftPos.x(), 0)
             rshift = QPointF(0, shiftPos.y())
+
+        #print "ShiftPos: ", shiftPos
+        #print "rindex: ", rindex
+        #print "rshift: ", rshift
+        #print "lindex: ", lindex
+        #print "lshift: ", lshift
+        #print ""
+
         shape.moveVertexBy(rindex, rshift)
         shape.moveVertexBy(lindex, lshift)
+
+        #print ""
 
     def boundedMoveShape(self, shape, pos):
         if self.outOfPixmap(pos):
