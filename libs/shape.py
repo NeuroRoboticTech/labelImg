@@ -160,6 +160,7 @@ class Shape(object):
     def moveVertexBy(self, i, offset):
         self.points[i] = self.points[i] + offset
 
+        #print ""
         #print "moveVertexBy"
         #print "index: ", i
         #print "points[i]: ", self.points[i]

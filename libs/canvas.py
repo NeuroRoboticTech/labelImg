@@ -48,6 +48,11 @@ class Canvas(QWidget):
         self.drawPoint = None
         self._painter = QPainter()
         self._cursor = CURSOR_DEFAULT
+        
+        #If this is true then bounding boxes are drawn and edited
+        #as squares instead of rectangles.
+        self.drawSquare = True
+        
         # Menus:
         self.menus = (QMenu(), QMenu())
         # Set widget options.
@@ -96,10 +101,13 @@ class Canvas(QWidget):
         if self.drawing():
             self.overrideCursor(CURSOR_DRAW)
             if self.current:
-                #remap the rectangle as a square.
-                sqr_len = math.sqrt(pos.x()*pos.x() + pos.y()+pos.y())
-                pos = QPointF(self.current[0].x() + sqr_len, self.current[0].y() + sqr_len)
-                #print "pos: ", pos
+                if self.drawSquare == True:
+                  #remap the rectangle as a square.
+                  y_diff = pos.y() - self.current[0].y()
+                  #print "y_diff: ", y_diff
+
+                  pos = QPointF(self.current[0].x() + y_diff, self.current[0].y() + y_diff)
+                  #print "pos: ", pos
 
                 color = self.lineColor
                 if self.outOfPixmap(pos):
@@ -121,12 +129,10 @@ class Canvas(QWidget):
         # Polygon copy moving.
         if Qt.RightButton & ev.buttons():
             if self.selectedShapeCopy and self.prevPoint:
-                print "Poly move A"
                 self.overrideCursor(CURSOR_MOVE)
                 self.boundedMoveShape(self.selectedShapeCopy, pos)
                 self.repaint()
             elif self.selectedShape:
-                print "Poly move B"
                 self.selectedShapeCopy = self.selectedShape.copy()
                 self.repaint()
             return
@@ -134,12 +140,10 @@ class Canvas(QWidget):
         # Polygon/Vertex moving.
         if Qt.LeftButton & ev.buttons():
             if self.selectedVertex():
-                #print "Vertex move A"
                 self.boundedMoveVertex(pos)
                 self.shapeMoved.emit()
                 self.repaint()
             elif self.selectedShape and self.prevPoint:
-                print "Vertex move B"
                 self.overrideCursor(CURSOR_MOVE)
                 self.boundedMoveShape(self.selectedShape, pos)
                 self.shapeMoved.emit()
@@ -159,12 +163,14 @@ class Canvas(QWidget):
                 if self.selectedVertex():
                     self.hShape.highlightClear()
                 self.hVertex, self.hShape, self.drawPoint = index, shape, shape[index]
-                shape.highlightVertex(index, shape.MOVE_VERTEX)
-                self.overrideCursor(CURSOR_POINT)
-                self.setToolTip("Click & drag to move point")
-                self.setStatusTip(self.toolTip())
-                self.update()
-                break
+
+                if not self.drawSquare or (self.drawSquare and (index == 0 or index ==2)):
+                  shape.highlightVertex(index, shape.MOVE_VERTEX)
+                  self.overrideCursor(CURSOR_POINT)
+                  self.setToolTip("Click & drag to move point")
+                  self.setStatusTip(self.toolTip())
+                  self.update()
+                  break
             elif shape.containsPoint(pos):
                 if self.selectedVertex():
                     self.hShape.highlightClear()
@@ -300,26 +306,22 @@ class Canvas(QWidget):
         
         point = shape[index]
 
-        print "************ index: ", index
-        print "point: ", point
-        print "draw point: ", drawPoint
-        print "pos: ", pos
+        if self.drawSquare == True:
+          print "************ index: ", index
+          print "point: ", point
+          print "draw point: ", drawPoint
+          print "pos: ", pos
 
-        x_diff = pos.x() - drawPoint.x()
-        y_diff = pos.y() - drawPoint.y()
-        sqr_len = math.sqrt(x_diff*x_diff + y_diff*y_diff)
-        print "x_diff: ", x_diff
-        print "y_diff: ", y_diff
-        print "sqr_len: ", sqr_len
-        #new_pos = pos
-        if x_diff < 0 or y_diff < 0:
-          new_pos = drawPoint - QPointF(sqr_len, sqr_len)
+          y_diff = pos.y() - drawPoint.y()
+          print "y_diff: ", y_diff
+          new_pos = pos
+          new_pos = drawPoint + QPointF(y_diff, y_diff)
+          print "new_pos: ", new_pos
         else:
-          new_pos = drawPoint + QPointF(sqr_len, sqr_len)
-        print "new_pos: ", new_pos
+          new_pos = pos
 
         if self.outOfPixmap(new_pos):
-            print "out of pixmap"
+            #print "out of pixmap"
             return
             #new_pos = self.intersectionPoint(point, new_pos)
 
@@ -342,7 +344,7 @@ class Canvas(QWidget):
         #print "rshift: ", rshift
         #print "lindex: ", lindex
         #print "lshift: ", lshift
-        #print ""
+        print ""
 
         shape.moveVertexBy(rindex, rshift)
         shape.moveVertexBy(lindex, lshift)
